@@ -14,6 +14,7 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/shumkovdenis/grpc/graceful"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 	pb "google.golang.org/grpc/examples/helloworld/helloworld"
 	"google.golang.org/grpc/metadata"
 )
@@ -51,9 +52,10 @@ func Start() {
 
 	ctx, cancel := context.WithTimeout(context.Background(), cfg.Service.Timeout)
 
-	conn, err := grpc.DialContext(ctx, cfg.Service.Address()) // grpc.WithTransportCredentials(insecure.NewCredentials()),
-	// grpc.WithBlock(),
-
+	conn, err := grpc.DialContext(ctx, cfg.Service.Address(),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		// grpc.WithBlock(),
+	)
 	cancel()
 	if err != nil {
 		log.Fatalf("did not connect: %v", err)
