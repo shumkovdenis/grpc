@@ -50,10 +50,13 @@ func Start() {
 
 	log.Printf("config %+v", cfg)
 
-	conn, err := grpc.Dial(cfg.Service.Address(),
+	ctx, cancel := context.WithTimeout(context.Background(), cfg.Service.Timeout)
+
+	conn, err := grpc.DialContext(ctx, cfg.Service.Address(),
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithBlock(),
 	)
+	cancel()
 	if err != nil {
 		log.Fatalf("did not connect: %v", err)
 	}
