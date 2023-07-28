@@ -13,7 +13,7 @@ import (
 )
 
 type config struct {
-	Host string `env:"HOST" envDefault:"127.0.0.1"`
+	Host string `env:"HOST" envDefault:""`
 	Port string `env:"PORT" envDefault:"50051"`
 }
 
