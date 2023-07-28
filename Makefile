@@ -1,5 +1,8 @@
 run-server:
-	go run server/main.go
+	go run main.go
 
 run-client:
-	SERVICE_PORT=50051 go run client/main.go
+	SERVICE_PORT=50051 go run main.go --client
+
+kube-apply:
+	kubectl apply -f ./k8s

@@ -4,24 +4,38 @@ import (
 	"context"
 	"log"
 	"net"
-	"os"
-	"os/signal"
-	"syscall"
+	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/caarlos0/env/v9"
+	daprd "github.com/dapr/go-sdk/service/http"
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
+	"github.com/shumkovdenis/grpc/graceful"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	pb "google.golang.org/grpc/examples/helloworld/helloworld"
 	"google.golang.org/grpc/metadata"
 )
 
-type config struct {
-	Host    string        `env:"SERVICE_HOST" envDefault:"127.0.0.1"`
-	Port    string        `env:"SERVICE_PORT" envDefault:"${DAPR_GRPC_PORT}" envExpand:"true"`
-	Name    string        `env:"SERVICE_NAME" envDefault:"grpc-server"`
+type serviceConfig struct {
+	Host    string        `env:"HOST" envDefault:"127.0.0.1"`
+	Port    string        `env:"PORT" envDefault:"${DAPR_GRPC_PORT}" envExpand:"true"`
+	Name    string        `env:"NAME" envDefault:"grpc-server"`
 	Timeout time.Duration `env:"TIMEOUT" envDefault:"5s"`
-	Sleep   time.Duration `env:"SLEEP" envDefault:"3s"`
+}
+
+func (c *serviceConfig) Address() string {
+	return net.JoinHostPort(c.Host, c.Port)
+}
+
+type config struct {
+	Host      string        `env:"HOST" envDefault:"127.0.0.1"`
+	Port      string        `env:"PORT" envDefault:"3000"`
+	Service   serviceConfig `envPrefix:"SERVICE_"`
+	Sleep     time.Duration `env:"SLEEP" envDefault:"3s"`
+	Autostart bool          `env:"AUTOSTART" envDefault:"true"`
 }
 
 func (c *config) Address() string {
@@ -36,7 +50,7 @@ func Start() {
 
 	log.Printf("config %+v", cfg)
 
-	conn, err := grpc.Dial(cfg.Address(),
+	conn, err := grpc.Dial(cfg.Service.Address(),
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithBlock(),
 	)
@@ -44,52 +58,61 @@ func Start() {
 		log.Fatalf("did not connect: %v", err)
 	}
 
-	run(&cfg, conn)
+	srv := &server{
+		cfg:  &cfg,
+		conn: conn,
+	}
+
+	if cfg.Autostart {
+		srv.Toggle()
+	}
+
+	r := chi.NewRouter()
+	r.Use(middleware.Logger)
+	r.Get("/toggle", func(w http.ResponseWriter, r *http.Request) {
+		val := srv.Toggle()
+		w.Write([]byte("toggled: " + strconv.FormatBool(val)))
+	})
+
+	daprServer := daprd.NewServiceWithMux(cfg.Address(), r)
+	graceful.Run(daprServer)
 }
 
-func run(cfg *config, conn *grpc.ClientConn) {
-	errChan := make(chan error)
-	stopChan := make(chan os.Signal, 1)
+type server struct {
+	cfg    *config
+	conn   *grpc.ClientConn
+	active bool
+	pause  bool
+}
 
-	// bind OS events to the signal channel
-	signal.Notify(stopChan, syscall.SIGTERM, syscall.SIGINT)
+func (s *server) Toggle() bool {
+	if s.active {
+		s.pause = !s.pause
+		return s.pause
+	}
 
-	// run blocking call in a separate goroutine, report errors via channel
+	s.active = true
+	s.pause = false
+
+	client := pb.NewGreeterClient(s.conn)
+
 	go func() {
-		log.Println("starting server")
+		for !s.pause {
+			ctx, cancel := context.WithTimeout(context.Background(), s.cfg.Service.Timeout)
 
-		calls(cfg, pb.NewGreeterClient(conn))
-	}()
+			ctx = metadata.AppendToOutgoingContext(ctx, "dapr-app-id", s.cfg.Service.Name)
 
-	// terminate your environment gracefully before leaving main function
-	defer func() {
-		log.Println("stopping server")
+			r, err := client.SayHello(ctx, &pb.HelloRequest{Name: "Dapr"})
+			cancel()
+			if err != nil {
+				log.Printf("could not greet: %v", err)
+			}
 
-		conn.Close()
-	}()
+			log.Printf("Greeting: %s", r.GetMessage())
 
-	// block until either OS signal, or server fatal error
-	select {
-	case err := <-errChan:
-		log.Fatalf("server error: %v", err)
-	case <-stopChan:
-	}
-}
-
-func calls(cfg *config, client pb.GreeterClient) {
-	for {
-		ctx, cancel := context.WithTimeout(context.Background(), cfg.Timeout)
-
-		ctx = metadata.AppendToOutgoingContext(ctx, "dapr-app-id", cfg.Name)
-
-		r, err := client.SayHello(ctx, &pb.HelloRequest{Name: "Dapr"})
-		cancel()
-		if err != nil {
-			log.Printf("could not greet: %v", err)
+			time.Sleep(s.cfg.Sleep)
 		}
+	}()
 
-		log.Printf("Greeting: %s", r.GetMessage())
-
-		time.Sleep(cfg.Sleep)
-	}
+	return s.pause
 }

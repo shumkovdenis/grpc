@@ -1,0 +1,77 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: grpc-server
+  namespace: denis
+  labels:
+    app: grpc-server
+spec:
+  selector:
+    app: grpc-server
+  ports:
+    - protocol: TCP
+      port: 50051
+      targetPort: 50051
+  type: ClusterIP
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grpc-server
+  namespace: denis
+  labels:
+    app: grpc-server
+    # dapr.io/enabled: "true"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: grpc-server
+  template:
+    metadata:
+      labels:
+        app: grpc-server
+        # dapr.io/enabled: "true"
+      # annotations:
+        # dapr.io/enabled: "true"
+        # dapr.io/app-id: "gateway"
+        # dapr.io/app-protocol: "http"
+        # dapr.io/app-port: "7000"
+        # dapr.io/config: "main"
+        # dapr.io/sidecar-listen-addresses: "0.0.0.0"
+        # dapr.io/enable-api-logging: "true"
+        # dapr.io/enable-app-health-check: "true"
+    spec:
+      containers:
+        - name: grpc-server
+          image: ghcr.io/shumkovdenis/grpc:main
+          env:
+            - name: PORT
+              value: "50051"
+          ports:
+            - containerPort: 50051
+          imagePullPolicy: Always
+          resources:
+            limits:
+              cpu: 50m
+              memory: 128Mi
+            requests:
+              cpu: 10m
+              memory: 64Mi
+          # livenessProbe:
+          #   httpGet:
+          #     path: v1.0/healthz
+          #     port: 3500
+          #   initialDelaySeconds: 5
+          #   periodSeconds: 10
+          #   timeoutSeconds : 5
+          #   failureThreshold : 3
+          # readinessProbe:
+          #   httpGet:
+          #     path: v1.0/healthz
+          #     port: 3500
+          #   initialDelaySeconds: 5
+          #   periodSeconds: 10
+          #   timeoutSeconds : 5
+          #   failureThreshold: 3
