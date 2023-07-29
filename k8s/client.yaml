@@ -18,9 +18,15 @@ spec:
       containers:
         - name: grpc-client
           image: ghcr.io/shumkovdenis/grpc:main
+          args:
+            - '-client=true'
           env:
             - name: PORT
               value: "3000"
+            - name: SERVICE_HOST
+              value: "grpc-server"
+            - name: SERVICE_PORT
+              value: "50051"
           ports:
             - containerPort: 3000
           imagePullPolicy: Always
