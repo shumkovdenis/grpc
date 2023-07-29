@@ -19,6 +19,7 @@ type config struct {
 	Port        string        `env:"PORT" envDefault:"50051"`
 	Sleep       time.Duration `env:"SLEEP" envDefault:"1s"`
 	SkipRequest bool          `env:"SKIP_REQUEST" envDefault:"true"`
+	SkipHealth  bool          `env:"SKIP_HEALTH" envDefault:"true"`
 }
 
 func (c *config) Address() string {
@@ -55,7 +56,7 @@ func Start() {
 
 	grpcServer := grpc.NewServer()
 	pb.RegisterGreeterServer(grpcServer, &server{cfg: &cfg})
-	grpc_health_v1.RegisterHealthServer(grpcServer, &health{})
+	grpc_health_v1.RegisterHealthServer(grpcServer, &health{cfg: &cfg})
 
 	daprServer := daprd.NewServiceWithGrpcServer(lis, grpcServer)
 	graceful.Run(daprServer)
@@ -63,9 +64,12 @@ func Start() {
 
 type health struct {
 	grpc_health_v1.UnimplementedHealthServer
+	cfg *config
 }
 
 func (h health) Check(context.Context, *grpc_health_v1.HealthCheckRequest) (*grpc_health_v1.HealthCheckResponse, error) {
-	log.Println("serving health")
+	if !h.cfg.SkipHealth {
+		log.Println("serving health")
+	}
 	return &grpc_health_v1.HealthCheckResponse{Status: grpc_health_v1.HealthCheckResponse_SERVING}, nil
 }
