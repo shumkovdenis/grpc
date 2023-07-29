@@ -13,8 +13,9 @@ import (
 )
 
 type config struct {
-	Host string `env:"HOST" envDefault:""`
-	Port string `env:"PORT" envDefault:"50051"`
+	Host        string `env:"HOST" envDefault:""`
+	Port        string `env:"PORT" envDefault:"50051"`
+	SkipRequest bool   `env:"SKIP_REQUEST" envDefault:"true"`
 }
 
 func (c *config) Address() string {
@@ -23,10 +24,14 @@ func (c *config) Address() string {
 
 type server struct {
 	pb.UnimplementedGreeterServer
+	cfg *config
 }
 
 func (s *server) SayHello(ctx context.Context, in *pb.HelloRequest) (*pb.HelloReply, error) {
-	log.Printf("Received: %v", in.GetName())
+	if !s.cfg.SkipRequest {
+		log.Printf("Received: %v", in.GetName())
+	}
+
 	return &pb.HelloReply{Message: "Hello " + in.GetName()}, nil
 }
 
@@ -44,7 +49,7 @@ func Start() {
 	}
 
 	grpcServer := grpc.NewServer()
-	pb.RegisterGreeterServer(grpcServer, &server{})
+	pb.RegisterGreeterServer(grpcServer, &server{cfg: &cfg})
 
 	daprServer := daprd.NewServiceWithGrpcServer(lis, grpcServer)
 	graceful.Run(daprServer)

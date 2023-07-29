@@ -35,6 +35,8 @@ func Run(service Service) {
 		if err := service.GracefulStop(); err != nil {
 			log.Fatalf("graceful stop failed: %v", err)
 		}
+
+		log.Println("server stopped")
 	}()
 
 	// block until either OS signal, or server fatal error
