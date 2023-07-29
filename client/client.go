@@ -55,7 +55,7 @@ func Start() {
 
 	conn, err := grpc.DialContext(ctx, cfg.Service.Address(),
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
-		// grpc.WithBlock(),
+		grpc.WithBlock(),
 	)
 	cancel()
 	if err != nil {
