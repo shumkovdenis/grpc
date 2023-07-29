@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"net"
+	"time"
 
 	"github.com/caarlos0/env/v9"
 	daprd "github.com/dapr/go-sdk/service/grpc"
@@ -13,9 +14,10 @@ import (
 )
 
 type config struct {
-	Host        string `env:"HOST" envDefault:""`
-	Port        string `env:"PORT" envDefault:"50051"`
-	SkipRequest bool   `env:"SKIP_REQUEST" envDefault:"true"`
+	Host        string        `env:"HOST" envDefault:""`
+	Port        string        `env:"PORT" envDefault:"50051"`
+	Sleep       time.Duration `env:"SLEEP" envDefault:"1s"`
+	SkipRequest bool          `env:"SKIP_REQUEST" envDefault:"true"`
 }
 
 func (c *config) Address() string {
@@ -31,6 +33,8 @@ func (s *server) SayHello(ctx context.Context, in *pb.HelloRequest) (*pb.HelloRe
 	if !s.cfg.SkipRequest {
 		log.Printf("Received: %v", in.GetName())
 	}
+
+	time.Sleep(s.cfg.Sleep)
 
 	return &pb.HelloReply{Message: "Hello " + in.GetName()}, nil
 }
