@@ -31,11 +31,12 @@ func (c *serviceConfig) Address() string {
 }
 
 type config struct {
-	Host      string        `env:"HOST" envDefault:""`
-	Port      string        `env:"PORT" envDefault:"3000"`
-	Service   serviceConfig `envPrefix:"SERVICE_"`
-	Sleep     time.Duration `env:"SLEEP" envDefault:"3s"`
-	Autostart bool          `env:"AUTOSTART" envDefault:"true"`
+	Host         string        `env:"HOST" envDefault:""`
+	Port         string        `env:"PORT" envDefault:"3000"`
+	Service      serviceConfig `envPrefix:"SERVICE_"`
+	Sleep        time.Duration `env:"SLEEP" envDefault:"3s"`
+	Autostart    bool          `env:"AUTOSTART" envDefault:"true"`
+	SkipResponse bool          `env:"SKIP_RESPONSE" envDefault:"true"`
 }
 
 func (c *config) Address() string {
@@ -109,7 +110,7 @@ func (s *server) Toggle() bool {
 			cancel()
 			if err != nil {
 				log.Printf("could not greet: %v", err)
-			} else {
+			} else if !s.cfg.SkipResponse {
 				log.Printf("Greeting: %s", r.GetMessage())
 			}
 
