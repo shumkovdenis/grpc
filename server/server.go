@@ -11,6 +11,7 @@ import (
 	"github.com/shumkovdenis/grpc/graceful"
 	"google.golang.org/grpc"
 	pb "google.golang.org/grpc/examples/helloworld/helloworld"
+	"google.golang.org/grpc/health/grpc_health_v1"
 )
 
 type config struct {
@@ -54,7 +55,17 @@ func Start() {
 
 	grpcServer := grpc.NewServer()
 	pb.RegisterGreeterServer(grpcServer, &server{cfg: &cfg})
+	grpc_health_v1.RegisterHealthServer(grpcServer, &health{})
 
 	daprServer := daprd.NewServiceWithGrpcServer(lis, grpcServer)
 	graceful.Run(daprServer)
+}
+
+type health struct {
+	grpc_health_v1.UnimplementedHealthServer
+}
+
+func (h health) Check(context.Context, *grpc_health_v1.HealthCheckRequest) (*grpc_health_v1.HealthCheckResponse, error) {
+	log.Println("serving health")
+	return &grpc_health_v1.HealthCheckResponse{Status: grpc_health_v1.HealthCheckResponse_SERVING}, nil
 }
