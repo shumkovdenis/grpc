@@ -37,6 +37,7 @@ type config struct {
 	Sleep        time.Duration `env:"SLEEP" envDefault:"3s"`
 	Autostart    bool          `env:"AUTOSTART" envDefault:"true"`
 	SkipResponse bool          `env:"SKIP_RESPONSE" envDefault:"true"`
+	WithBlock    bool          `env:"WITH_BLOCK" envDefault:"false"`
 }
 
 func (c *config) Address() string {
@@ -51,12 +52,17 @@ func Start() {
 
 	log.Printf("config %+v", cfg)
 
+	opts := []grpc.DialOption{
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	}
+
+	if cfg.WithBlock {
+		opts = append(opts, grpc.WithBlock())
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), cfg.Service.Timeout)
 
-	conn, err := grpc.DialContext(ctx, cfg.Service.Address(),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-		grpc.WithBlock(),
-	)
+	conn, err := grpc.DialContext(ctx, cfg.Service.Address(), opts...)
 	cancel()
 	if err != nil {
 		log.Fatalf("did not connect: %v", err)
