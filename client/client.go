@@ -38,6 +38,7 @@ type config struct {
 	Autostart    bool          `env:"AUTOSTART" envDefault:"true"`
 	SkipResponse bool          `env:"SKIP_RESPONSE" envDefault:"true"`
 	WithBlock    bool          `env:"WITH_BLOCK" envDefault:"false"`
+	WithBalancer bool          `env:"WITH_BALANCER" envDefault:"false"`
 }
 
 func (c *config) Address() string {
@@ -58,6 +59,10 @@ func Start() {
 
 	if cfg.WithBlock {
 		opts = append(opts, grpc.WithBlock())
+	}
+
+	if cfg.WithBalancer {
+		opts = append(opts, grpc.WithDefaultServiceConfig(`{"loadBalancingConfig": [{"round_robin":{}}]}`))
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), cfg.Service.Timeout)
