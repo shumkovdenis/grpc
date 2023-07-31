@@ -12,6 +12,7 @@ import (
 	"google.golang.org/grpc"
 	pb "google.golang.org/grpc/examples/helloworld/helloworld"
 	"google.golang.org/grpc/health/grpc_health_v1"
+	"google.golang.org/grpc/keepalive"
 )
 
 type config struct {
@@ -20,6 +21,7 @@ type config struct {
 	Sleep       time.Duration `env:"SLEEP" envDefault:"1s"`
 	SkipRequest bool          `env:"SKIP_REQUEST" envDefault:"true"`
 	SkipHealth  bool          `env:"SKIP_HEALTH" envDefault:"true"`
+	WithTimeout bool          `env:"WITH_TIMEOUT" envDefault:"false"`
 }
 
 func (c *config) Address() string {
@@ -54,7 +56,19 @@ func Start() {
 		log.Fatalf("failed to listen: %v", err)
 	}
 
-	grpcServer := grpc.NewServer()
+	opts := []grpc.ServerOption{}
+
+	if cfg.WithTimeout {
+		opts = append(opts, grpc.KeepaliveParams(keepalive.ServerParameters{
+			MaxConnectionIdle:     time.Second,
+			MaxConnectionAge:      time.Second,
+			MaxConnectionAgeGrace: time.Second,
+			Time:                  time.Second * 10,
+			Timeout:               time.Second,
+		}))
+	}
+
+	grpcServer := grpc.NewServer(opts...)
 	pb.RegisterGreeterServer(grpcServer, &server{cfg: &cfg})
 	grpc_health_v1.RegisterHealthServer(grpcServer, &health{cfg: &cfg})
 
