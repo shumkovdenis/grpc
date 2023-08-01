@@ -21,13 +21,13 @@ import (
 
 const retryPolicy = `{
 	"methodConfig": [{
-	  "name": [{"service": "grpc.examples.echo.Echo"}],
+	  "name": [{}],
 	  "waitForReady": true,
 	  "retryPolicy": {
 		  "MaxAttempts": 4,
-		  "InitialBackoff": ".01s",
-		  "MaxBackoff": ".01s",
-		  "BackoffMultiplier": 1.0,
+		  "InitialBackoff": ".1s",
+		  "MaxBackoff": "1s",
+		  "BackoffMultiplier": 2.0,
 		  "RetryableStatusCodes": [ "UNAVAILABLE" ]
 	  }
 	}]}`
