@@ -87,7 +87,8 @@ func Start() {
 			opts,
 			grpc.WithUnaryInterceptor(
 				retry.UnaryClientInterceptor(
-					retry.WithMax(5),
+					retry.WithMax(8),
+					retry.WithBackoff(retry.BackoffExponential(50*time.Millisecond)),
 					retry.WithOnRetryCallback(func(ctx context.Context, attempt uint, err error) {
 						log.Printf("grpc_retry attempt: %d, backoff for %v", attempt, err)
 					}),
