@@ -19,6 +19,19 @@ import (
 	"google.golang.org/grpc/metadata"
 )
 
+const retryPolicy = `{
+	"methodConfig": [{
+	  "name": [{"service": "grpc.examples.echo.Echo"}],
+	  "waitForReady": true,
+	  "retryPolicy": {
+		  "MaxAttempts": 4,
+		  "InitialBackoff": ".01s",
+		  "MaxBackoff": ".01s",
+		  "BackoffMultiplier": 1.0,
+		  "RetryableStatusCodes": [ "UNAVAILABLE" ]
+	  }
+	}]}`
+
 type serviceConfig struct {
 	Host    string        `env:"HOST" envDefault:"127.0.0.1"`
 	Port    string        `env:"PORT" envDefault:"${DAPR_GRPC_PORT}" envExpand:"true"`
@@ -40,6 +53,7 @@ type config struct {
 	WithBlock    bool          `env:"WITH_BLOCK" envDefault:"false"`
 	WithBalancer bool          `env:"WITH_BALANCER" envDefault:"false"`
 	WaitForReady bool          `env:"WAIT_FOR_READY" envDefault:"false"`
+	WithRetry    bool          `env:"WITH_RETRY" envDefault:"false"`
 }
 
 func (c *config) Address() string {
@@ -64,6 +78,10 @@ func Start() {
 
 	if cfg.WithBalancer {
 		opts = append(opts, grpc.WithDefaultServiceConfig(`{"loadBalancingConfig": [{"round_robin":{}}]}`))
+	}
+
+	if cfg.WithRetry {
+		opts = append(opts, grpc.WithDefaultServiceConfig(retryPolicy))
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), cfg.Service.Timeout)
