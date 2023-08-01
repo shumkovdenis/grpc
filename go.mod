@@ -6,6 +6,7 @@ require (
 	github.com/caarlos0/env/v9 v9.0.0
 	github.com/dapr/go-sdk v1.8.0
 	github.com/go-chi/chi/v5 v5.0.8
+	github.com/grpc-ecosystem/go-grpc-middleware/v2 v2.0.0-rc.5
 	google.golang.org/grpc v1.57.0
 	google.golang.org/grpc/examples v0.0.0-20230727195822-b8d36caf8d03
 )

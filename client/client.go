@@ -12,6 +12,7 @@ import (
 	daprd "github.com/dapr/go-sdk/service/http"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/retry"
 	"github.com/shumkovdenis/grpc/graceful"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -81,7 +82,18 @@ func Start() {
 	}
 
 	if cfg.WithRetry {
-		opts = append(opts, grpc.WithDefaultServiceConfig(retryPolicy))
+		// opts = append(opts, grpc.WithDefaultServiceConfig(retryPolicy))
+		opts = append(
+			opts,
+			grpc.WithUnaryInterceptor(
+				retry.UnaryClientInterceptor(
+					retry.WithMax(5),
+					retry.WithOnRetryCallback(func(ctx context.Context, attempt uint, err error) {
+						log.Printf("grpc_retry attempt: %d, backoff for %v", attempt, err)
+					}),
+				),
+			),
+		)
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), cfg.Service.Timeout)
