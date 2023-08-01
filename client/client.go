@@ -39,6 +39,7 @@ type config struct {
 	SkipResponse bool          `env:"SKIP_RESPONSE" envDefault:"true"`
 	WithBlock    bool          `env:"WITH_BLOCK" envDefault:"false"`
 	WithBalancer bool          `env:"WITH_BALANCER" envDefault:"false"`
+	WaitForReady bool          `env:"WAIT_FOR_READY" envDefault:"false"`
 }
 
 func (c *config) Address() string {
@@ -117,7 +118,7 @@ func (s *server) Toggle() bool {
 
 			ctx = metadata.AppendToOutgoingContext(ctx, "dapr-app-id", s.cfg.Service.Name)
 
-			r, err := client.SayHello(ctx, &pb.HelloRequest{Name: "Dapr"})
+			r, err := client.SayHello(ctx, &pb.HelloRequest{Name: "Dapr"}, grpc.WaitForReady(s.cfg.WaitForReady))
 			cancel()
 			if err != nil {
 				log.Printf("could not greet: %v", err)
