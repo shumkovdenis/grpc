@@ -55,6 +55,7 @@ type config struct {
 	WithBalancer bool          `env:"WITH_BALANCER" envDefault:"false"`
 	WaitForReady bool          `env:"WAIT_FOR_READY" envDefault:"false"`
 	WithRetry    bool          `env:"WITH_RETRY" envDefault:"false"`
+	WithRetryLog bool          `env:"WITH_RETRY_LOG" envDefault:"false"`
 }
 
 func (c *config) Address() string {
@@ -90,7 +91,9 @@ func Start() {
 					retry.WithMax(8),
 					retry.WithBackoff(retry.BackoffExponential(50*time.Millisecond)),
 					retry.WithOnRetryCallback(func(ctx context.Context, attempt uint, err error) {
-						log.Printf("grpc_retry attempt: %d, backoff for %v", attempt, err)
+						if cfg.WithRetryLog {
+							log.Printf("grpc_retry attempt: %d, backoff for %v", attempt, err)
+						}
 					}),
 				),
 			),
